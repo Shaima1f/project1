@@ -1,0 +1,42 @@
+trigger:
+- main  # Trigger the pipeline when changes are pushed to the main branch
+
+pr: none  # Disable pull request triggers for this example
+
+jobs:
+- job: DownloadToad
+  pool:
+    vmImage: 'windows-latest'
+
+  steps:
+  - powershell: |
+      # Define the download URL and the target location
+      $toadDownloadUrl = "https://example.com/path/to/toad.zip"
+      $downloadPath = "$(Agent.TempDirectory)\toad.zip"
+
+      # Download Toad installation package
+      Invoke-WebRequest -Uri $toadDownloadUrl -OutFile $downloadPath
+
+      # Extract the downloaded package
+      Expand-Archive -Path $downloadPath -DestinationPath "$(Agent.TempDirectory)\Toad"
+
+      # Define environment variable for Toad
+      $env:TOAD_HOME = "$(Agent.TempDirectory)\Toad\ToadInstallFolder"
+      $env:PATH = "$env:PATH;$env:TOAD_HOME"
+
+      # Define Toad executable path
+      $toadExecutable = "$(Agent.TempDirectory)\Toad\ToadInstallFolder\Toad.exe"
+
+      # Show the extracted Toad path
+      Write-Host "Toad installation extracted to: $($env:TOAD_HOME)"
+    displayName: 'Download and Prepare Toad'
+
+  - powershell: |
+      # Now you can use the $toadExecutable to run Toad commands
+      $projectPath = "$(System.DefaultWorkingDirectory)/path/to/your/project"
+      $connectionString = "YourConnectionString"
+      $deployCommand = "$toadExecutable /execute:$projectPath /server:$connectionString"
+
+      # Execute the deployment command
+      Invoke-Expression $deployCommand
+    displayName: 'Deploy Database Changes'
